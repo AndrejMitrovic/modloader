@@ -15,44 +15,7 @@ enum ChannelType : ubyte { invalid = ubyte.max, bit8 = 0x00, bit16 = 0x01, }
 struct Module
 {
     ///
-    @ZCharArray(3)
-    string id;
-
-    ///
-    byte version_;
-
-    ///
-    @ZCharArray(20)
     string songName;
-
-    ///
-    ushort numTracks;
-
-    ///
-    ubyte lastPattern;
-
-    ///
-    ubyte lastOrder;
-
-    ///
-    @property ubyte numOfOrders()
-    {
-        import std.conv : to;
-        return to!ubyte(lastOrder + 1);
-    }
-
-    ///
-    short commentSize;
-
-    ///
-    ubyte numSamples;
-
-    ///
-    @property ubyte numOfPatterns()
-    {
-        import std.conv : to;
-        return to!ubyte(lastPattern + 1);
-    }
 
     ///
     ChannelType channelType;
@@ -61,25 +24,22 @@ struct Module
     ubyte beatsPerTrack;
 
     ///
-    ubyte numChannels;
-
-    ///
     ubyte[32] panPositions;
 
     ///
-    @SkipLoad Sample[] samples;
+    Sample[] samples;
 
     ///
-    @SkipLoad Track[] tracks;
+    Track[] tracks;
 
     ///
-    @SkipLoad Pattern[] patterns;
+    Pattern[] patterns;
 
     ///
-    @SkipLoad ubyte[] patternOrders;
+    ubyte[] patternOrders;
 
     ///
-    @SkipLoad string comment;
+    string comment;
 
     ///
     string toString()

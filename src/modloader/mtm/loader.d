@@ -12,8 +12,9 @@ import std.exception  : enforce;
 
 import modloader.util : modDir, streamFile, ZCharArray;
 
-import modloader.mtm.types : Module, Sample, Track, TrackRow, Pattern;
-import modloader.mtm.util  : decodeComment, toSampleSize;
+import modloader.mtm.internal : ModuleHeader, toModule;
+import modloader.mtm.types    : Module, Sample, Track, TrackRow, Pattern;
+import modloader.mtm.util     : decodeComment, toSampleSize;
 
 /**
     Read a Multi Track Module file.
@@ -34,9 +35,9 @@ Module readMTM(string path)
     auto file = path.streamFile;
     enforce(file.size > 0);
 
-    auto mod = file.read!Module;
+    auto modHeader = file.read!ModuleHeader;
 
-    with (mod)
+    with (modHeader)
     {
         enforce(id == "MTM");
         enforce(version_ == 16);  // note: unspecified
@@ -47,6 +48,8 @@ Module readMTM(string path)
         enforce(numChannels > 0 && numChannels <= 32, numChannels.text);
     }
 
+    auto mod = modHeader.toModule();
+
     enum HeaderSize = 66;
     enforce(file.pos == HeaderSize);
 
@@ -56,28 +59,28 @@ Module readMTM(string path)
     enum PatternByteSize = 32 * short.sizeof;
 
     const totalBytes = HeaderSize +
-                       SampleByteSize * mod.numSamples +
+                       SampleByteSize * modHeader.numSamples +
                        PatternOrderSize +
-                       TrackByteSize * mod.numTracks +
-                       PatternByteSize * mod.numOfPatterns +
-                       mod.commentSize;
+                       TrackByteSize * modHeader.numTracks +
+                       PatternByteSize * modHeader.numOfPatterns +
+                       modHeader.commentSize;
 
     enforce(totalBytes < file.size);
 
-    mod.samples = uninitializedArray!(Sample[])(mod.numSamples);
+    mod.samples = uninitializedArray!(Sample[])(modHeader.numSamples);
 
     foreach (ref sample; mod.samples)
     {
         sample = file.read!Sample;
     }
 
-    enforce(file.pos == 0x42 + mod.numSamples * SampleByteSize);
+    enforce(file.pos == 0x42 + modHeader.numSamples * SampleByteSize);
 
-    mod.patternOrders = file.read!(ubyte[128])[0 .. mod.numOfOrders].dup;
+    mod.patternOrders = file.read!(ubyte[128])[0 .. modHeader.numOfOrders].dup;
 
-    enforce(file.pos == 0xC2 + mod.numSamples * SampleByteSize);
+    enforce(file.pos == 0xC2 + modHeader.numSamples * SampleByteSize);
 
-    mod.tracks = uninitializedArray!(Track[])(mod.numTracks);
+    mod.tracks = uninitializedArray!(Track[])(modHeader.numTracks);
 
     foreach (ref track; mod.tracks)
     {
@@ -88,27 +91,27 @@ Module readMTM(string path)
     }
 
     enforce(file.pos == 0xC2 +
-            mod.numSamples * SampleByteSize +
-            mod.numTracks * TrackByteSize);
+            modHeader.numSamples * SampleByteSize +
+            modHeader.numTracks * TrackByteSize);
 
-    mod.patterns = uninitializedArray!(Pattern[])(mod.numOfPatterns);
+    mod.patterns = uninitializedArray!(Pattern[])(modHeader.numOfPatterns);
     foreach (ref pattern; mod.patterns)
     {
         pattern = file.read!Pattern;
     }
 
     enforce(file.pos == 0xC2 +
-            mod.numSamples * SampleByteSize +
-            mod.numTracks * TrackByteSize +
-            mod.numOfPatterns * PatternByteSize);
+            modHeader.numSamples * SampleByteSize +
+            modHeader.numTracks * TrackByteSize +
+            modHeader.numOfPatterns * PatternByteSize);
 
-    mod.comment = file.read!(char[])(mod.commentSize).decodeComment().idup;
+    mod.comment = file.read!(char[])(modHeader.commentSize).decodeComment().idup;
 
     enforce(file.pos == 0xC2 +
-            mod.numSamples * SampleByteSize +
-            mod.numTracks * TrackByteSize +
-            mod.numOfPatterns * PatternByteSize +
-            mod.commentSize);
+            modHeader.numSamples * SampleByteSize +
+            modHeader.numTracks * TrackByteSize +
+            modHeader.numOfPatterns * PatternByteSize +
+            modHeader.commentSize);
 
     foreach (ref sample; mod.samples.filter!(a => a.length))
     {
