@@ -228,7 +228,6 @@ Module readMTM(string path)
 
     mod.samples = uninitializedArray!(Sample[])(mod.numSamples);
 
-    /** Read the sample headers (instrument data). */
     foreach (ref sample; mod.samples)
     {
         sample = file.read!Sample;
@@ -245,8 +244,6 @@ Module readMTM(string path)
 
     mod.tracks = uninitializedArray!(Track[])(mod.numTracks);
 
-    // load tracks
-    // each track is saved independently and has TrackByteSize (192) bytes
     foreach (ref track; mod.tracks)
     {
         foreach (ref row; track.rows)
@@ -255,7 +252,7 @@ Module readMTM(string path)
         }
     }
 
-    enforce(file.pos == 0xc2 + mod.numSamples * SampleByteSize + mod.numTracks * 192);
+    enforce(file.pos == 0xc2 + mod.numSamples * SampleByteSize + mod.numTracks * TrackByteSize);
 
     mod.patterns = uninitializedArray!(Pattern[])(mod.numOfPatterns);
     foreach (ref pattern; mod.patterns)
@@ -263,13 +260,12 @@ Module readMTM(string path)
         pattern = file.read!Pattern;
     }
 
-    enforce(file.pos == 0xC2 + mod.numSamples * SampleByteSize + mod.numTracks * 192 + mod.numOfPatterns * 32 * 2);
+    enforce(file.pos == 0xC2 + mod.numSamples * SampleByteSize + mod.numTracks * TrackByteSize + mod.numOfPatterns * 32 * 2);
 
     const comment = file.read!(char[])(mod.commentSize).decodeComment().idup;
 
-    enforce(file.pos == 0xC2 + mod.numSamples * SampleByteSize + mod.numTracks * 192 + mod.numOfPatterns * 32 * 2 + mod.commentSize);
+    enforce(file.pos == 0xC2 + mod.numSamples * SampleByteSize + mod.numTracks * TrackByteSize + mod.numOfPatterns * 32 * 2 + mod.commentSize);
 
-    // load samples which have a length
     foreach (ref sample; mod.samples.filter!(a => a.length))
     {
         size_t byteCount = sample.length * sample.sampleType.toSampleSize;
