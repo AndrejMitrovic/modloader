@@ -54,6 +54,9 @@ import std.stdio : File;
 /// Root dir of the modloader project.
 immutable string rootDir;
 
+/// Root dir of the example module files.
+immutable string modDir;
+
 shared static this()
 {
     import core.runtime : Runtime;
@@ -64,6 +67,8 @@ shared static this()
     getopt(args, "rootDir", cast(string*)&rootDir);
 
     assert(rootDir.exists, rootDir);
+
+    modDir = "examples/modules/".workFilePath;
 }
 
 /// Get the absolute path of $(D path) relative to the root dir of the modloader project.

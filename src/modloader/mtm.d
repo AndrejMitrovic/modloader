@@ -12,7 +12,7 @@ import std.exception  : enforce;
 import std.stdio      : writeln, writefln;
 import std.traits     : isSomeChar;
 
-import modloader.util : streamFile, ZCharArray, SkipLoad;
+import modloader.util : modDir, streamFile, SkipLoad, ZCharArray;
 
 ///
 enum ChannelType : ubyte { invalid = ubyte.max, bit8 = 0x00, bit16 = 0x01, }
@@ -302,10 +302,18 @@ Module readMTM(string path)
 ///
 unittest
 {
-    import modloader.util : workFilePath;
-    readMTM("examples/modules/hacksaw.mtm".workFilePath).writeln;
-    readMTM("examples/modules/modern_society.mtm".workFilePath).writeln;
+    import std.path : buildPath;
+
+    foreach (modFile; testModFiles)
+        modDir.buildPath(modFile).readMTM.writeln;
 }
+
+version (unittest)
+private immutable testModFiles =
+[
+    "hacksaw.mtm",
+    "modern_society.mtm",
+];
 
 /// MTM comments have their own encoding.
 private char[] decodeComment(char[] input)
