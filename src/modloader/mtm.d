@@ -80,6 +80,9 @@ struct Module
     @SkipLoad Pattern[] patterns;
 
     ///
+    @SkipLoad string comment;
+
+    ///
     string toString()
     {
         import std.string : format;
@@ -240,7 +243,7 @@ Module readMTM(string path)
         sample = file.read!Sample;
     }
 
-    enforce(file.pos == (0x42 + mod.numSamples * SampleByteSize));
+    enforce(file.pos == 0x42 + mod.numSamples * SampleByteSize);
 
     const patternOrders = file.read!(ubyte[128])[0 .. mod.numOfOrders];
 
@@ -259,7 +262,9 @@ Module readMTM(string path)
         }
     }
 
-    enforce(file.pos == 0xC2 + mod.numSamples * SampleByteSize + mod.numTracks * TrackByteSize);
+    enforce(file.pos == 0xC2 +
+            mod.numSamples * SampleByteSize +
+            mod.numTracks * TrackByteSize);
 
     mod.patterns = uninitializedArray!(Pattern[])(mod.numOfPatterns);
     foreach (ref pattern; mod.patterns)
@@ -267,11 +272,18 @@ Module readMTM(string path)
         pattern = file.read!Pattern;
     }
 
-    enforce(file.pos == 0xC2 + mod.numSamples * SampleByteSize + mod.numTracks * TrackByteSize + mod.numOfPatterns * PatternByteSize);
+    enforce(file.pos == 0xC2 +
+            mod.numSamples * SampleByteSize +
+            mod.numTracks * TrackByteSize +
+            mod.numOfPatterns * PatternByteSize);
 
-    const comment = file.read!(char[])(mod.commentSize).decodeComment().idup;
+    mod.comment = file.read!(char[])(mod.commentSize).decodeComment().idup;
 
-    enforce(file.pos == 0xC2 + mod.numSamples * SampleByteSize + mod.numTracks * TrackByteSize + mod.numOfPatterns * PatternByteSize + mod.commentSize);
+    enforce(file.pos == 0xC2 +
+            mod.numSamples * SampleByteSize +
+            mod.numTracks * TrackByteSize +
+            mod.numOfPatterns * PatternByteSize +
+            mod.commentSize);
 
     foreach (ref sample; mod.samples.filter!(a => a.length))
     {
