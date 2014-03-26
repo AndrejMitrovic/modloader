@@ -4,9 +4,10 @@
  *     (See accompanying file LICENSE_1_0.txt or copy at
  *           http://www.boost.org/LICENSE_1_0.txt)
  */
-module modloader;
+module modloader.mtm;
 
-private
+public
 {
-    import modloader.mtm;
+    import modloader.mtm.loader;
+    import modloader.mtm.types;
 }
