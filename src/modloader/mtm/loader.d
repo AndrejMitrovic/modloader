@@ -115,11 +115,11 @@ Module readMTM(string path)
 
     foreach (ref sample; mod.samples.filter!(a => a.length))
     {
-        size_t byteCount = sample.length * sample.sampleType.toSampleSize;
+        size_t byteCount = sample.length * sample.type.toSampleSize;
         enforce(byteCount, sample.text);
 
-        sample.sampleData = uninitializedArray!(ubyte[])(byteCount);
-        file.readTo(sample.sampleData);
+        sample.data = uninitializedArray!(ubyte[])(byteCount);
+        file.readTo(sample.data);
     }
 
     enforce(file.end);

@@ -96,10 +96,10 @@ struct Sample
     ubyte volume;
 
     ///
-    SampleType sampleType;
+    SampleType type;
 
     ///
-    @SkipLoad ubyte[] sampleData;
+    @SkipLoad ubyte[] data;
 }
 
 ///
