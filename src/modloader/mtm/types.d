@@ -9,7 +9,12 @@ module modloader.mtm.types;
 import modloader.util : SkipLoad, ZCharArray;
 
 ///
-enum ChannelType : ubyte { invalid = ubyte.max, bit8 = 0x00, bit16 = 0x01, }
+enum ChannelType : ubyte
+{
+    invalid = ubyte.max, /// sentinel
+    ubit8   = 0x00,      ///
+    ubit16  = 0x01,      ///
+}
 
 ///
 struct Module
@@ -61,7 +66,12 @@ struct Module
 }
 
 ///
-enum SampleType : ubyte { invalid = ubyte.max, bit8 = 0x00, bit16 = 0x01, }
+enum SampleType : ubyte
+{
+    invalid = ubyte.max, /// sentinel
+    ubit8   = 0x00,      ///
+    ubit16  = 0x01,      ///
+}
 
 ///
 struct Sample

@@ -25,10 +25,10 @@ package size_t toSampleSize(SampleType sampleType)
 {
     switch (sampleType) with (SampleType)
     {
-        case bit8:
+        case ubit8:
             return 1;
 
-        case bit16:
+        case ubit16:
             return 2;
 
         default:
