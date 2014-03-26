@@ -80,6 +80,9 @@ struct Module
     @SkipLoad Pattern[] patterns;
 
     ///
+    @SkipLoad ubyte[] patternOrders;
+
+    ///
     @SkipLoad string comment;
 
     ///
@@ -245,7 +248,7 @@ Module readMTM(string path)
 
     enforce(file.pos == 0x42 + mod.numSamples * SampleByteSize);
 
-    const patternOrders = file.read!(ubyte[128])[0 .. mod.numOfOrders];
+    mod.patternOrders = file.read!(ubyte[128])[0 .. mod.numOfOrders].dup;
 
     enforce(file.pos == 0xC2 + mod.numSamples * SampleByteSize);
 
