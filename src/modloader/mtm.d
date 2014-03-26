@@ -21,13 +21,15 @@ enum ChannelType : ubyte { invalid = ubyte.max, bit8 = 0x00, bit16 = 0x01, }
 struct Module
 {
     ///
-    @ZCharArray(3) string id;
+    @ZCharArray(3)
+    string id;
 
     ///
     byte version_;
 
     ///
-    @ZCharArray(20) string songName;
+    @ZCharArray(20)
+    string songName;
 
     ///
     ushort numTracks;
