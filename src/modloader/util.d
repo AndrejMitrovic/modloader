@@ -57,6 +57,7 @@ immutable string rootDir;
 /// Root dir of the example module files.
 immutable string modDir;
 
+version (TestModloader)
 shared static this()
 {
     import core.runtime : Runtime;

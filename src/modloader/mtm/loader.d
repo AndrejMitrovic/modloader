@@ -125,6 +125,7 @@ Module readMTM(string path)
 }
 
 ///
+version (TestModloader)
 unittest
 {
     import std.path : buildPath;

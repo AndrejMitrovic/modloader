@@ -166,7 +166,7 @@ int main(string[] args)
     data.channelCount = to!size_t(args[2]);
 
     // get a newly filled buffer
-    data.mod = readModMTM(args[1]);
+    data.mod = readMTM(args[1]);
     stderr.writefln("mod: %s", data.mod);
     assert({ return 0; }());
 
