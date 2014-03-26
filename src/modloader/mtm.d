@@ -39,6 +39,13 @@ struct Module
     ubyte lastOrder;
 
     ///
+    @property ubyte numOfOrders()
+    {
+        import std.conv : to;
+        return to!ubyte(lastOrder + 1);
+    }
+
+    ///
     short commentSize;
 
     ///
@@ -235,7 +242,7 @@ Module readMTM(string path)
 
     enforce(file.pos == (0x42 + mod.numSamples * SampleByteSize));
 
-    const patternOrders = file.read!(ubyte[128])[0 .. mod.lastOrder + 1];
+    const patternOrders = file.read!(ubyte[128])[0 .. mod.numOfOrders];
 
     enforce(file.pos == 0xC2 + mod.numSamples * SampleByteSize);
 
@@ -252,7 +259,7 @@ Module readMTM(string path)
         }
     }
 
-    enforce(file.pos == 0xc2 + mod.numSamples * SampleByteSize + mod.numTracks * TrackByteSize);
+    enforce(file.pos == 0xC2 + mod.numSamples * SampleByteSize + mod.numTracks * TrackByteSize);
 
     mod.patterns = uninitializedArray!(Pattern[])(mod.numOfPatterns);
     foreach (ref pattern; mod.patterns)
@@ -260,11 +267,11 @@ Module readMTM(string path)
         pattern = file.read!Pattern;
     }
 
-    enforce(file.pos == 0xC2 + mod.numSamples * SampleByteSize + mod.numTracks * TrackByteSize + mod.numOfPatterns * 32 * 2);
+    enforce(file.pos == 0xC2 + mod.numSamples * SampleByteSize + mod.numTracks * TrackByteSize + mod.numOfPatterns * PatternByteSize);
 
     const comment = file.read!(char[])(mod.commentSize).decodeComment().idup;
 
-    enforce(file.pos == 0xC2 + mod.numSamples * SampleByteSize + mod.numTracks * TrackByteSize + mod.numOfPatterns * 32 * 2 + mod.commentSize);
+    enforce(file.pos == 0xC2 + mod.numSamples * SampleByteSize + mod.numTracks * TrackByteSize + mod.numOfPatterns * PatternByteSize + mod.commentSize);
 
     foreach (ref sample; mod.samples.filter!(a => a.length))
     {
