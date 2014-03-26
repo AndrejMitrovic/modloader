@@ -15,6 +15,7 @@
 *.map
 *.obj
 *.rar
+*.tmp
 *.xml
 *.deps
 *.modTime
