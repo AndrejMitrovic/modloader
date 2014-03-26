@@ -249,9 +249,6 @@ Module readMTM(string path)
 
     enforce(file.pos == 0xC2 + mod.numSamples * SampleByteSize);
 
-    const trackPos = file.pos;
-    const seqPos = file.pos + (TrackByteSize * mod.numTracks);
-
     mod.tracks = uninitializedArray!(Track[])(mod.numTracks);
 
     foreach (ref track; mod.tracks)
