@@ -69,11 +69,56 @@ private alias DeviceSampleType = GetSampleType!DeviceFormatType;
 /// Sample type of the loaded audio waveform (you can pick any sample type here).
 // alias AudioSampleType = short;
 
+float lerp(T)(T a, T b, float t)
+{
+    return a * (1 - t) + b * t;
+}
+
+struct Stride
+{
+    @property ubyte front()
+    {
+        //~ auto sampleLeft = data[cast(size_t)lastIdx];
+        //~ auto sampleRight = data[cast(size_t)idx];
+
+        //~ auto frac = idx - cast(size_t)idx;
+
+        //~ auto targetSample = cast(ubyte)lerp(sampleLeft, sampleRight, frac);
+
+        //~ return targetSample;
+        return data[cast(size_t)idx];
+    }
+
+    @property bool empty()
+    {
+        // safe version
+        return cast(size_t)idx >= data.length;
+    }
+
+    @property void popFront()
+    {
+        //~ lastIdx = idx;
+        idx += step;
+    }
+
+private:
+    const ubyte[] data;
+    const float step;
+
+    float idx = 0;
+    //~ float lastIdx = 0;
+}
+
+Stride stride(ubyte[] data, float step)
+{
+    return Stride(data, step);
+}
+
 struct Voice
 {
     auto peek(size_t count)
     {
-        return data.take(count).stride(1);
+        return data.take(count).stride(pitch * 0.008);
     }
 
     void advance(size_t count)
@@ -175,7 +220,7 @@ void play_non_interleaved(DeviceSampleType[] buffer, size_t sampleCount, Callbac
             auto sample = data.mod.samples[instrument - 1];
 
             // load data
-            auto voice = Voice(note % 12, sample.data);
+            auto voice = Voice(note, sample.data);
             data.voices[chanIdx] = voice;
         }
     }
@@ -226,6 +271,9 @@ int main(string[] args)
     size_t sampleCount, device, offset;
 
     CallbackData data;
+
+    data.mod = readMTM(args[1]);
+
     data.channelCount = to!size_t(args[2]);
 
     data.sampleRate = 44100;
@@ -250,10 +298,9 @@ int main(string[] args)
 
     data.maxSampleCount = data.mod.sequence.length * samplesPerPattern;
 
-    data.curSampleCount = samplesPerPattern * 4;
+    enum startPattern = 7;
 
-    // get a newly filled buffer
-    data.mod = readMTM(args[1]);
+    data.curSampleCount = samplesPerPattern * min(startPattern, data.mod.sequence.length);
 
     // todo: add check for module channel count
     // enforce(data.flacHeader.numChannels == data.channelCount);  // hardcode for now
