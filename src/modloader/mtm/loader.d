@@ -143,7 +143,7 @@ unittest
     foreach (modFile; testModFiles)
     {
         auto mod = modDir.buildPath(modFile).readMTM;
-        mod.prettyPrint();
+        //~ mod.prettyPrint();
     }
 }
 
