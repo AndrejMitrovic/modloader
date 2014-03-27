@@ -6,15 +6,19 @@
  */
 module modloader.mtm.loader;
 
-import std.algorithm  : filter;
-import std.conv       : text;
-import std.exception  : enforce;
+import std.algorithm : filter;
+import std.conv      : text;
+import std.exception : enforce;
 
 import modloader.util : modDir, streamFile, ZCharArray;
 
-import modloader.mtm.internal : ModuleHeader, toModule;
-import modloader.mtm.types    : Module, Sample, Track, TrackRow, Pattern;
-import modloader.mtm.util     : decodeComment, toSampleSize;
+import modloader.mtm.internal :
+    ModuleInternal,   toModule,
+    TrackRowInternal, toTrackRow,
+    SampleInternal,   toSample;
+
+import modloader.mtm.types : Module, Sample, Track, TrackRow, Pattern;
+import modloader.mtm.util  : decodeComment, toSampleSize;
 
 /**
     Read a Multi Track Module file.
@@ -35,9 +39,9 @@ Module readMTM(string path)
     auto file = path.streamFile;
     enforce(file.size > 0);
 
-    auto modHeader = file.read!ModuleHeader;
+    auto modInternal = file.read!ModuleInternal;
 
-    with (modHeader)
+    with (modInternal)
     {
         enforce(id == "MTM");
         enforce(version_ == 16);  // note: unspecified
@@ -48,7 +52,7 @@ Module readMTM(string path)
         enforce(numChannels > 0 && numChannels <= 32, numChannels.text);
     }
 
-    auto mod = modHeader.toModule();
+    auto mod = modInternal.toModule();
 
     enum HeaderSize = 66;
     enforce(file.pos == HeaderSize);
@@ -59,59 +63,59 @@ Module readMTM(string path)
     enum PatternByteSize = 32 * short.sizeof;
 
     const totalBytes = HeaderSize +
-                       SampleByteSize * modHeader.numSamples +
+                       SampleByteSize * modInternal.numSamples +
                        PatternOrderSize +
-                       TrackByteSize * modHeader.numTracks +
-                       PatternByteSize * modHeader.numOfPatterns +
-                       modHeader.commentSize;
+                       TrackByteSize * modInternal.numTracks +
+                       PatternByteSize * modInternal.numOfPatterns +
+                       modInternal.commentSize;
 
     enforce(totalBytes < file.size);
 
-    mod.samples = uninitializedArray!(Sample[])(modHeader.numSamples);
+    mod.samples = uninitializedArray!(Sample[])(modInternal.numSamples);
 
     foreach (ref sample; mod.samples)
     {
-        sample = file.read!Sample;
+        sample = file.read!SampleInternal.toSample;
     }
 
-    enforce(file.pos == 0x42 + modHeader.numSamples * SampleByteSize);
+    enforce(file.pos == 0x42 + modInternal.numSamples * SampleByteSize);
 
-    mod.patternOrders = file.read!(ubyte[128])[0 .. modHeader.numOfOrders].dup;
+    mod.sequence = file.read!(ubyte[128])[0 .. modInternal.numOfOrders].dup;
 
-    enforce(file.pos == 0xC2 + modHeader.numSamples * SampleByteSize);
+    enforce(file.pos == 0xC2 + modInternal.numSamples * SampleByteSize);
 
-    mod.tracks = uninitializedArray!(Track[])(modHeader.numTracks);
+    mod.tracks = uninitializedArray!(Track[])(modInternal.numTracks);
 
     foreach (ref track; mod.tracks)
     {
         foreach (ref row; track.rows)
         {
-            row = file.read!TrackRow;
+            row = file.read!TrackRowInternal.toTrackRow;
         }
     }
 
     enforce(file.pos == 0xC2 +
-            modHeader.numSamples * SampleByteSize +
-            modHeader.numTracks * TrackByteSize);
+            modInternal.numSamples * SampleByteSize +
+            modInternal.numTracks * TrackByteSize);
 
-    mod.patterns = uninitializedArray!(Pattern[])(modHeader.numOfPatterns);
+    mod.patterns = uninitializedArray!(Pattern[])(modInternal.numOfPatterns);
     foreach (ref pattern; mod.patterns)
     {
         pattern = file.read!Pattern;
     }
 
     enforce(file.pos == 0xC2 +
-            modHeader.numSamples * SampleByteSize +
-            modHeader.numTracks * TrackByteSize +
-            modHeader.numOfPatterns * PatternByteSize);
+            modInternal.numSamples * SampleByteSize +
+            modInternal.numTracks * TrackByteSize +
+            modInternal.numOfPatterns * PatternByteSize);
 
-    mod.comment = file.read!(char[])(modHeader.commentSize).decodeComment().idup;
+    mod.comment = file.read!(char[])(modInternal.commentSize).decodeComment().idup;
 
     enforce(file.pos == 0xC2 +
-            modHeader.numSamples * SampleByteSize +
-            modHeader.numTracks * TrackByteSize +
-            modHeader.numOfPatterns * PatternByteSize +
-            modHeader.commentSize);
+            modInternal.numSamples * SampleByteSize +
+            modInternal.numTracks * TrackByteSize +
+            modInternal.numOfPatterns * PatternByteSize +
+            modInternal.commentSize);
 
     foreach (ref sample; mod.samples.filter!(a => a.length))
     {
@@ -134,13 +138,18 @@ unittest
     import std.path : buildPath;
     import std.stdio : writeln;
 
+    import modloader.mtm.util : prettyPrint;
+
     foreach (modFile; testModFiles)
-        modDir.buildPath(modFile).readMTM.writeln;
+    {
+        auto mod = modDir.buildPath(modFile).readMTM;
+        mod.prettyPrint();
+    }
 }
 
 version (unittest)
 private immutable testModFiles =
 [
     "hacksaw.mtm",
-    "modern_society.mtm",
+    //~ "modern_society.mtm",
 ];
