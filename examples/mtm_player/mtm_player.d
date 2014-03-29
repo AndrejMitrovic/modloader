@@ -60,53 +60,88 @@ import std.stdio;
 import std.range;
 import std.typetuple;
 
+enum SampleRate = 44100;
+
 /// The format type used in our callbacks (use only int8/int16 formats for most devices).
 enum DeviceFormatType = RtAudioFormat.int16;
 
 /// Sample type based on the selected format type.
 private alias DeviceSampleType = GetSampleType!DeviceFormatType;
 
-/// Sample type of the loaded audio waveform (you can pick any sample type here).
-// alias AudioSampleType = short;
+immutable ProTrackerPeriodTable =
+[
+    //~ 8363, 8860, 9387, 9945, 10537, 11163, 11827, 12530, 13257, 14065, 14901, 15787, 16726
+    1712, 1616, 1524, 1440, 1356, 1280, 1208, 1140, 1076, 1016, 960, 907,
+    856, 808, 762, 720, 678, 640, 604, 570, 538, 508, 480, 453,
+    428, 404, 381, 360, 339, 320, 302, 285, 269, 254, 240, 226,
+    214, 202, 190, 180, 170, 160, 151, 143, 135, 127, 120, 113,
+    107, 101, 95, 90, 85, 80, 75, 71, 67, 63, 60, 56,
+    53, 50, 47, 45, 42, 40, 37, 35, 33, 31, 30, 28
+];
 
-float lerp(T)(T a, T b, float t)
+float getFrequency(ubyte pitch)
 {
-    return a * (1 - t) + b * t;
+    return ProTrackerPeriodTable[pitch];
 }
 
 struct Stride
 {
+    this(ubyte[] data, float phaseIncrement)
+    {
+        this.data = data;
+        this.phaseIncrement = phaseIncrement;
+    }
+
+    /** Linear interpolation. */
     @property ubyte front()
     {
-        //~ auto sampleLeft = data[cast(size_t)lastIdx];
-        //~ auto sampleRight = data[cast(size_t)idx];
+        float fIndex = getIndex();
+        int index    = cast(int)fIndex;
+        float fract  = fIndex - index;
 
-        //~ auto frac = idx - cast(size_t)idx;
+        alias toFloat = toSampleType!float;
+        alias toUbyte = toSampleType!ubyte;
 
-        //~ auto targetSample = cast(ubyte)lerp(sampleLeft, sampleRight, frac);
+        float lo = toFloat(data[index]);
+        float hi = toFloat(data[index + 1]);
 
-        //~ return targetSample;
-        return data[cast(size_t)idx];
+        float val = lo + fract * (hi - lo);
+
+        return toUbyte(val);
+    }
+
+    private float getIndex()
+    {
+        return phase * data.length;
     }
 
     @property bool empty()
     {
-        // safe version
-        return cast(size_t)idx >= data.length;
+        return cast(size_t)(getIndex() + 1) >= data.length;
     }
 
     @property void popFront()
     {
-        //~ lastIdx = idx;
-        idx += step;
+        phase += phaseIncrement;
+    }
+
+    @property void popFrontNumber(size_t count)
+    {
+        foreach (i; 0 .. count)
+            phase += phaseIncrement;
+    }
+
+    Stride save()
+    {
+        return this;
     }
 
 private:
-    const ubyte[] data;
-    const float step;
+    float phase = 0;
 
-    float idx = 0;
-    //~ float lastIdx = 0;
+private:
+    /* const */ ubyte[] data;
+    /* const */ float phaseIncrement;
 }
 
 Stride stride(ubyte[] data, float step)
@@ -116,19 +151,25 @@ Stride stride(ubyte[] data, float step)
 
 struct Voice
 {
+    this(ubyte pitch, ubyte[] data)
+    {
+        auto freq = getFrequency(pitch);
+        auto phaseIncrement = 80 * (freq / (cast(float)data.length * cast(float)SampleRate));
+        range = Stride(data, phaseIncrement);
+    }
+
     auto peek(size_t count)
     {
-        return data.take(count).stride(pitch * 0.008);
+        return range.save.take(count);
     }
 
     void advance(size_t count)
     {
-        data.popFrontN(count);
+        range.popFrontNumber(count);
     }
 
 private:
-    ubyte pitch;
-    ubyte[] data;
+    Stride range;
 }
 
 /// Temporary data the callback reads and manipulates, which avoids the use of globals.
@@ -215,13 +256,12 @@ void play_non_interleaved(DeviceSampleType[] buffer, size_t sampleCount, Callbac
             import std.string;
 
             const noteName = format("%s%s", noteNames[note % 12], (note / 12) + 3);
-            stderr.writefln("new note %s at row %s for pattern %s sequence %s", noteName, curRow, patIdx, seqIdx);
+            stderr.writefln("new note %s %s at row %s for pattern %s sequence %s", note, noteName, curRow, patIdx, seqIdx);
 
             auto sample = data.mod.samples[instrument - 1];
 
             // load data
-            auto voice = Voice(note, sample.data);
-            data.voices[chanIdx] = voice;
+            data.voices[chanIdx] = Voice(note, sample.data);
         }
     }
 
@@ -231,7 +271,7 @@ void play_non_interleaved(DeviceSampleType[] buffer, size_t sampleCount, Callbac
     {
         channelBuffer[] = 0;
 
-        foreach (voiceIdx, voice; data.voices)
+        foreach (voiceIdx, ref voice; data.voices)
         {
             auto buff = voice.peek(channelBuffer.length);
 
@@ -276,7 +316,7 @@ int main(string[] args)
 
     data.channelCount = to!size_t(args[2]);
 
-    data.sampleRate = 44100;
+    data.sampleRate = SampleRate;
 
     enum ticksPerMinute = 50;  // 50 hz as in old Amiga hardware
 
