@@ -8,6 +8,10 @@ modloader is a D2 library for loading [module][module] (tracker music) files.
 
 Homepage: https://github.com/AndrejMitrovic/modloader
 
+## Links
+
+ftp://ftp.modland.com/pub/documents/format_documentation/Tracker differences for Coders.txt
+
 ## License
 
 Distributed under the Boost Software License, Version 1.0.
