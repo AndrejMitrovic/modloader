@@ -30,7 +30,9 @@ import modloader.mtm.util  : decodeComment, toSampleSize;
     space.
 
     MTM Reference:
-    ftp://ftp.modland.com/pub/documents/format_documentation/MultiTracker%20%28.mtm%29%20%233.txt
+
+    ftp://ftp.modland.com/pub/documents/format_documentation/MultiTracker (.mtm) %232.txt
+    ftp://ftp.modland.com/pub/documents/format_documentation/MultiTracker (.mtm) %233.txt
 */
 Module readMTM(string path)
 {
@@ -133,8 +135,11 @@ Module readMTM(string path)
 
 ///
 version (TestModloader)
+version (none)
 unittest
 {
+    // todo: actually test the results of the read data to match what is expected in the file.
+
     import std.path : buildPath;
     import std.stdio : writeln;
 

@@ -6,7 +6,7 @@
  */
 module modloader.util;
 
-import std.traits : isSomeChar;
+import std.traits : isSomeChar, isInstanceOf;
 
 /**
     C-style strings stored in static arrays are typically either zero-terminated,
@@ -129,11 +129,28 @@ unittest
     static assert(GetAttributes!(S.x)[0] == "bar");
 }
 
-/// Used as an attribute for de-serialization of static (and possibly zero-terminated) char arrays into strings.
-struct ZCharArray { size_t size; }
+/** Workaround for tuple indexing issues. */
+template GetFirstAttribute(alias T)
+{
+    alias Attributes = GetAttributes!T;
+
+    static if (Attributes.length == 0)
+        alias GetFirstAttribute = void;
+    else
+    static if (Attributes.length == 1)
+        alias GetFirstAttribute = Attributes[0];
+    else
+    static assert(0);
+}
 
 /// Used as an attribute for fields which should not automatically be de-serialized.
 enum SkipLoad;
+
+/// Check whether the $(D symbol) has the $(D SkipLoad) attribute.
+enum hasSkipLoad(alias symbol) = is(GetAttributes!(symbol)[0] == SkipLoad);
+
+/// Used as an attribute for de-serialization of static (and possibly zero-terminated) char arrays into strings.
+struct ZCharArray { size_t size; }
 
 /// Check whether the $(D symbol) has the $(D ZCharArray) attribute.
 enum hasZCharArray(alias symbol) = is(typeof(GetAttributes!(symbol)[0]) == ZCharArray);
@@ -141,8 +158,26 @@ enum hasZCharArray(alias symbol) = is(typeof(GetAttributes!(symbol)[0]) == ZChar
 /// Get the $(D ZCharArray) attribute of a $(D symbol).
 enum getZCharArray(alias symbol) = GetAttributes!(symbol)[0];
 
-/// Check whether the $(D symbol) has the $(D SkipLoad) attribute.
-enum hasSkipLoad(alias symbol) = is(GetAttributes!(symbol)[0] == SkipLoad);
+/// Used as an attribute for fields which have to be converted (e.g. endianness byte swap).
+/// The Type designates the type of the field, or a differnt Type which should be read instead.
+/// E.g. the Phobos byte-swap routines read a ubyte[N] array rather than a direct field type.
+/// In that case instantiate Converter's Type argument with $(D ubyte[FieldType.sizeof]).
+struct Converter(alias func, Type) { alias converter = func; alias ReadType = Type; }
+
+/// Check whether the $(D symbol) has the $(D hasConverter) attribute.
+enum hasConverter(alias symbol) = isInstanceOf!(Converter, GetFirstAttribute!(symbol));
+
+/// Get the $(D Converter) attribute of a $(D symbol).
+alias getConverter(alias symbol) = GetFirstAttribute!symbol;
+
+/// Workaround for Issue 12489 and others - Templates such as littleEndianToNative are not partially instantiable.
+template PartialTempl(alias templ, T...)
+{
+    auto PartialTempl(Args...)(auto ref Args args)
+    {
+        return templ!T(args);
+    }
+}
 
 ///
 struct FileStreamer
@@ -212,6 +247,17 @@ struct FileStreamer
                 enum Size = getZCharArray!(result.tupleof[idx]).size;
                 alias Type = char[Size];
                 result.tupleof[idx] = read!Type.fromStaticZ;
+            }
+            else
+            static if (hasConverter!(result.tupleof[idx]))
+            {
+                alias Converter = getConverter!(result.tupleof[idx]);
+
+                alias ReadType = Converter.ReadType;
+                alias converter = Converter.converter;
+
+                auto value = read!ReadType;
+                result.tupleof[idx] = converter(value);
             }
             else
             {
