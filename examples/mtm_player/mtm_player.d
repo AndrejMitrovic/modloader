@@ -6,6 +6,11 @@
  */
 module mtm_player;
 
+/*
+Run via:
+rdmd -Isrc -I..\RtAudioD\src -I..\wkBindKeys -unittest ..\RtAudioD\implib\dsound.lib examples\mtm_player\mtm_player.d examples\modules\modern_society.mtm 2 0
+*/
+
 // Tick duration is 20ms.
 
 // Each row will play for 6 ticks.
@@ -54,6 +59,7 @@ import modloader.mtm;
 import core.stdc.stdlib;
 import core.thread;
 
+import std.algorithm;
 import std.conv;
 import std.exception;
 import std.stdio;
